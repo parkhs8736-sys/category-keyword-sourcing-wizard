@@ -76,13 +76,17 @@ def matches(record, filters):
     numeric = {'volume': number(record.get('volume')), 'lastYearVolume': number(record.get('lastYearVolume')), 'naverPrice': number(record.get('naverPrice')), 'coupangPrice': number(record.get('coupangPrice')), 'deliveryRate': (number(record.get('rocketRate')) + number(record.get('sellerRocketRate'))) * 100, 'overseasReviews': number(record.get('overseasReviews'))}
     for key, actual in numeric.items():
         rule = filters.get(key, {})
-        value = rule.get('value')
-        if value in (None, ''):
-            continue
-        target = number(value)
-        operator = rule.get('operator', 'gte')
-        if (operator == 'gte' and actual < target) or (operator == 'lte' and actual > target) or (operator == 'lt' and actual >= target):
-            return False
+        rules = [rule]
+        if isinstance(rule, dict) and ('min' in rule or 'max' in rule):
+            rules = [rule.get('min', {}), rule.get('max', {})]
+        for condition in rules:
+            value = condition.get('value') if isinstance(condition, dict) else None
+            if value in (None, ''):
+                continue
+            target = number(value)
+            operator = condition.get('operator', 'gte')
+            if (operator == 'gte' and actual < target) or (operator == 'lte' and actual > target) or (operator == 'lt' and actual >= target):
+                return False
     return True
 
 if __name__ == '__main__':
