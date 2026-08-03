@@ -1,0 +1,61 @@
+/* 판별 대상 목록은 본문 기능 오류와 분리해 항상 표시합니다. */
+(()=>{
+  const fields=[['keyword','키워드'],['category','카테고리'],['brand','브랜드키워드'],['shopping','쇼핑키워드'],['ratio','경쟁률'],['volume','최근1개월검색량'],['lastYearVolume','작년검색량'],['peakMonth','작년최대검색월'],['season','계절성월'],['competition','네이버경쟁강도'],['naverPrice','네이버평균가'],['coupangPrice','쿠팡평균가'],['rocketRate','로켓배송비율(단위%)'],['sellerRocketRate','판매자로켓배송비율(단위%)'],['deliveryRate','배송비율(로켓+판매자)(단위%)'],['overseasReviews','쿠팡해외배송 총리뷰수']];
+  const key='sourcing-target-list-view-v1';
+  const escape=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+  const readView=()=>{try{const saved=JSON.parse(localStorage.getItem(key)||'{}'),limit=Number(saved.limit);return {limit:[50,100,200,300,500].includes(limit)?limit:50,columns:Array.isArray(saved.columns)&&saved.columns.length?saved.columns:fields.map(([name])=>name)}}catch{return {limit:50,columns:fields.map(([name])=>name)}}};
+  let view=readView();
+  const saveView=()=>localStorage.setItem(key,JSON.stringify({limit:view.limit,columns:view.columns}));
+  const collapseState=window.sourcingJudgeCollapseState||{get:(_name,fallback=false)=>fallback,set:()=>{}};
+  let sort={field:'',direction:1},targetListCollapsed=collapseState.get('targetList',false),targetListFieldCollapsed=collapseState.get('targetListFields',false);
+  const existing=document.querySelector('#targetListPanel');
+  const panel=existing||document.createElement('section');
+  panel.id='targetListPanel';panel.className='target-list-panel';
+  document.querySelector('section.filters.card')?.insertAdjacentElement('afterend',panel);
+  panel.innerHTML=`<div class="target-list-heading"><div><div class="target-list-title-row"><h2>필터결과 목록 <strong id="targetListCount">0개</strong></h2><button type="button" class="outline target-list-panel-toggle" id="targetListPanelToggle" aria-expanded="true">접기</button></div><p id="targetListSummary">전체 키워드를 추출하면 이곳에서 대상 목록을 확인할 수 있습니다.</p></div><div class="target-list-controls"><label>리스트 보기 <select id="targetListSize"><option value="50">50개</option><option value="100">100개</option><option value="200">200개</option><option value="300">300개</option><option value="500">500개</option></select></label><button type="button" class="outline" id="targetListExcelButton">엑셀다운</button><button type="button" class="outline" id="targetListSaveButton">목록 설정 저장</button></div></div><div class="target-list-selection"><label><input type="checkbox" id="targetListSelectAll"> 전체선택</label><strong>선택 <em id="targetListSelectedCount">0</em>개</strong><button type="button" class="outline" id="targetListRunSelected">선택 키워드 판별</button><button type="button" class="outline" id="targetListClearSelected">선택 해제</button><span class="target-list-metric-tools"><button type="button" class="outline" id="targetListMetricReserve">쿠팡판매지표 분석예약</button><button type="button" class="stop" id="targetListMetricCancel">예약 취소</button></span></div><div class="target-list-column-panel" id="targetListColumnPanel"><div class="target-list-column-heading"><b>엑셀 필드 표시 선택</b><span class="target-list-field-all"><label><input type="checkbox" id="targetListFieldSelectAll"> 전체선택</label><label><input type="checkbox" id="targetListFieldClearAll"> 전체해제</label><button type="button" class="outline target-list-field-toggle" id="targetListFieldToggle" aria-expanded="true">접기</button></span></div><div class="target-list-column-options">${fields.map(([name,label])=>`<label><input type="checkbox" value="${name}"> ${label}</label>`).join('')}</div></div><div class="target-list-table-wrap"><table><thead id="targetListHead"></thead><tbody id="targetListBody"></tbody></table></div>`;
+  const byId=id=>document.querySelector(`#${id}`),selection=window.targetKeywordSelection instanceof Set?window.targetKeywordSelection:new Set();
+  window.targetKeywordSelection=selection;
+  const setTargetListCollapsed=collapsed=>{targetListCollapsed=collapsed;panel.classList.toggle('is-collapsed',collapsed);const button=byId('targetListPanelToggle');button.textContent=collapsed?'펼치기':'접기';button.setAttribute('aria-expanded',String(!collapsed));collapseState.set('targetList',collapsed)};
+  const toggleTargetList=()=>setTargetListCollapsed(!targetListCollapsed);
+  const notify=message=>{const toast=byId('toast');if(!toast)return;toast.textContent=message;toast.classList.add('show');setTimeout(()=>toast.classList.remove('show'),2600)};
+  const records=()=>typeof state!=='undefined'&&Array.isArray(state.records)?state.records:[];
+  const syncOptions=()=>{panel.querySelectorAll('.target-list-column-options input').forEach(input=>{input.checked=input.value==='keyword'||view.columns.includes(input.value);input.disabled=input.value==='keyword'});byId('targetListFieldSelectAll').checked=fields.every(([name])=>name==='keyword'||view.columns.includes(name));byId('targetListFieldClearAll').checked=fields.filter(([name])=>name!=='keyword').every(([name])=>!view.columns.includes(name))};
+  const sortValue=value=>{const text=Array.isArray(value)?value.join(', '):String(value??'').trim(),number=Number(text.replace(/[^0-9.-]/g,''));return text&&Number.isFinite(number)&&/[0-9]/.test(text)?{type:'number',value:number}:{type:'text',value:text}};
+  const sortedRecords=()=>{const rows=records().slice();if(sort.field)rows.sort((left,right)=>{const a=sortValue(left[sort.field]),b=sortValue(right[sort.field]),result=a.type==='number'&&b.type==='number'?a.value-b.value:String(a.value).localeCompare(String(b.value),'ko');return result*sort.direction});return rows};
+  const displayValue=(name,value)=>{if(value===undefined||value===null||value==='')return '-';if(['rocketRate','sellerRocketRate','deliveryRate'].includes(name)){const number=Number(value);if(Number.isFinite(number))return `${(Math.abs(number)<=1?number*100:number).toFixed(1)}%`}if(Array.isArray(value))return value.join(', ');const number=Number(value);return String(value).trim()!==''&&Number.isFinite(number)?number.toLocaleString('ko-KR',{maximumFractionDigits:10}):value};
+  const render=()=>{const source=records(),rows=sortedRecords(),columns=fields.filter(([name])=>name==='keyword'||view.columns.includes(name)),visible=rows.slice(0,view.limit);for(const keyword of [...selection])if(!source.some(row=>String(row?.keyword)===keyword))selection.delete(keyword);byId('targetListCount').textContent=`${source.length.toLocaleString()}개`;byId('targetListSelectedCount').textContent=selection.size;byId('targetListSelectAll').checked=!!source.length&&source.every(row=>selection.has(String(row.keyword)));byId('targetListSummary').textContent=source.length?`${selection.size?`선택한 ${selection.size.toLocaleString()}개 키워드만 판별할 수 있습니다. `:''}전체 ${source.length.toLocaleString()}개 중 ${visible.length.toLocaleString()}개를 표시합니다.`:'전체 키워드를 추출하면 이곳에서 대상 목록을 확인할 수 있습니다.';byId('targetListHead').innerHTML=`<tr><th>번호</th>${columns.map(([name,label])=>`<th><span>${escape(label)}</span><span class="target-list-sort"><button type="button" data-target-sort="${name}" data-target-direction="asc" aria-label="${escape(label)} 오름차순">▲</button><button type="button" data-target-sort="${name}" data-target-direction="desc" aria-label="${escape(label)} 내림차순">▼</button></span></th>`).join('')}</tr>`;byId('targetListBody').innerHTML=visible.length?visible.map((row,index)=>`<tr><td>${index+1}</td>${columns.map(([name])=>name==='keyword'?`<td class="target-keyword-cell"><label><input class="target-keyword-check" type="checkbox" value="${escape(String(row.keyword))}" ${selection.has(String(row.keyword))?'checked':''}><b>${escape(row.keyword)}</b></label></td>`:`<td>${escape(displayValue(name,row[name]))}</td>`).join('')}</tr>`).join(''):`<tr><td class="target-list-empty" colspan="${columns.length+1}">추출된 판별 대상이 없습니다.</td></tr>`};
+  byId('targetListSize').value=String(view.limit);syncOptions();
+  const setTargetListFieldCollapsed=collapsed=>{targetListFieldCollapsed=collapsed;const box=byId('targetListColumnPanel'),fieldButton=byId('targetListFieldToggle');box.classList.toggle('is-collapsed',collapsed);fieldButton.textContent=collapsed?'펼치기':'접기';fieldButton.setAttribute('aria-expanded',String(!collapsed));collapseState.set('targetListFields',collapsed)};
+  const toggleFieldOptions=()=>setTargetListFieldCollapsed(!targetListFieldCollapsed);
+  setTargetListCollapsed(targetListCollapsed);
+  setTargetListFieldCollapsed(targetListFieldCollapsed);
+  byId('targetListExcelButton').onclick=()=>{
+    const columns=fields.filter(([name])=>name==='keyword'||view.columns.includes(name));
+    const rows=sortedRecords();
+    if(!rows.length){notify('다운로드할 필터결과가 없습니다.');return}
+    if(typeof XLSX==='undefined'){notify('엑셀 기능을 준비하지 못했습니다. 페이지를 새로고침해 주세요.');return}
+    const exportRows=[['번호',...columns.map(([,label])=>label)],...rows.map((row,index)=>[index+1,...columns.map(([name])=>displayValue(name,row[name]))])];
+    const sheet=XLSX.utils.aoa_to_sheet(exportRows);
+    sheet['!cols']=[{wch:8},...columns.map(([name,label])=>({wch:name==='keyword'?24:Math.max(14,label.length+2)}))];
+    const workbook=XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook,sheet,'필터결과');
+    XLSX.writeFile(workbook,`필터결과_${new Date().toISOString().slice(0,10)}.xlsx`);
+    notify(`필터결과 ${rows.length.toLocaleString()}개를 엑셀로 다운로드했습니다.`);
+  };
+  byId('targetListFieldToggle').onclick=toggleFieldOptions;
+  byId('targetListPanelToggle').onclick=toggleTargetList;
+  byId('targetListSize').onchange=event=>{view.limit=Number(event.target.value);saveView();render()};
+  panel.querySelector('.target-list-column-options').onchange=()=>{const columns=[...panel.querySelectorAll('.target-list-column-options input:checked')].map(input=>input.value);if(!columns.length){notify('목록에 표시할 항목을 한 개 이상 선택해 주세요.');syncOptions();return}view.columns=columns;saveView();syncOptions();render()};
+  byId('targetListFieldSelectAll').onchange=event=>{if(!event.target.checked){syncOptions();return}view.columns=fields.map(([name])=>name);saveView();syncOptions();render()};
+  byId('targetListFieldClearAll').onchange=event=>{if(!event.target.checked){syncOptions();return}view.columns=['keyword'];saveView();syncOptions();render()};
+  byId('targetListSaveButton').onclick=()=>{saveView();notify('엑셀 필드 표시 설정을 저장했습니다. 다음 실행에도 같은 항목을 불러옵니다.')};
+  byId('targetListSelectAll').onchange=event=>{if(event.target.checked)records().forEach(row=>row?.keyword&&selection.add(String(row.keyword)));else selection.clear();render()};
+  byId('targetListBody').onchange=event=>{const checkbox=event.target.closest('.target-keyword-check');if(!checkbox)return;if(checkbox.checked)selection.add(checkbox.value);else selection.delete(checkbox.value);render()};
+  byId('targetListClearSelected').onclick=()=>{selection.clear();render()};
+  byId('targetListRunSelected').onclick=()=>{if(!selection.size){notify('판별할 키워드를 먼저 선택해 주세요.');return}if(confirm(`선택한 ${selection.size.toLocaleString()}개 키워드만 소싱판별을 실행할까요?`))byId('runButton').click()};
+  byId('targetListMetricReserve').onclick=()=>{if(!selection.size){notify('판매지표 분석예약할 키워드를 먼저 선택해 주세요.');return}if(typeof metricQueueSelection==='undefined'||typeof updateMetricQueueSelection!=='function'){notify('쿠팡판매지표 분석 기능을 준비하지 못했습니다. 페이지를 새로고침해 주세요.');return}selection.forEach(keyword=>metricQueueSelection.add(keyword));updateMetricQueueSelection();const runButton=byId('metricQueueRun');if(runButton)runButton.click()};
+  byId('targetListMetricCancel').onclick=()=>{if(typeof metricReservationRunning!=='undefined'&&metricReservationRunning){byId('metricQueueCancel')?.click();return}if(typeof metricQueueSelection!=='undefined'){metricQueueSelection.clear();if(typeof updateMetricQueueSelection==='function')updateMetricQueueSelection()}selection.clear();render();notify('판매지표 분석예약 선택을 취소했습니다.')};
+  byId('targetListHead').onclick=event=>{const button=event.target.closest('[data-target-sort]');if(!button)return;sort={field:button.dataset.targetSort,direction:button.dataset.targetDirection==='asc'?1:-1};render()};
+  window.renderTargetList=render;
+  render();
+})();
