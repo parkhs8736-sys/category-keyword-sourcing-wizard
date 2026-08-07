@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>윙렌즈 로컬</title>
+  <link rel="stylesheet" href="dashboard.css">
+</head>
+<body>
+  <main class="layout">
+    <header class="topbar">
+      <a class="identity" href="#" aria-label="윙렌즈 홈"><span class="aperture">◎</span><span>윙렌즈</span></a>
+      <div class="top-actions"><button id="open-sourcing" class="sourcing-open" type="button">소싱판별</button><button id="seller-account-manager" type="button">판매자 계정 관리</button><div class="privacy"><i></i> 데이터는 이 브라우저 안에서만 처리됩니다</div><button id="login-wing" type="button">쿠팡윙 로그인 하기</button></div>
+    </header>
+
+    <section class="query-stage">
+      <div class="stage-copy">
+        <h1>검색어 하나를<br><em>판매 지표</em>로 바꿉니다.</h1>
+      </div>
+      <form id="search-form" class="query-form">
+        <label for="keyword">분석할 검색어</label>
+        <div class="input-line">
+          <input id="keyword" type="search" placeholder="미니냉장고" autocomplete="off" required>
+          <button id="range-button" class="range-button" type="button">1페이지 ~ 1페이지</button>
+          <button id="run" type="submit">분석 시작 <span>→</span></button>
+        </div>
+        <div class="ready-check"><span>1. 쿠팡윙 로그인</span><b>›</b><span>2. 검색어 입력</span><b>›</b><span>3. 최대 30개 · 10초 간격 안전 조회</span></div>
+      </form>
+    </section>
+
+    <section class="ledger">
+      <div class="ledger-head">
+        <div><p>ANALYSIS LEDGER</p><h2 id="title">분석 대기 중</h2></div>
+        <div class="run-state"><span id="state">검색어를 입력하세요</span><button id="export" type="button" disabled>엑셀 다운로드</button><button id="cancel" type="button" disabled>중지</button></div>
+      </div>
+      <div id="empty" class="empty"><span>⌁</span><strong>아직 분석한 상품이 없습니다.</strong><small>위 검색창에서 첫 키워드를 입력해 보세요.</small></div>
+      <div id="table-box" class="table-box" hidden>
+        <table>
+          <thead><tr>
+            <th data-sort="rank"><button type="button" disabled>순위 <span>↕</span></button></th>
+            <th data-sort="product"><button type="button" disabled>상품명 <span>↕</span></button></th>
+            <th data-sort="price"><button type="button" disabled>가격 <span>↕</span></button></th>
+            <th data-sort="reviews"><button type="button" disabled>리뷰수 <span>↕</span></button></th>
+            <th data-sort="shipping"><button type="button" disabled>배송방법 <span>↕</span></button></th>
+            <th data-sort="pv"><button type="button" disabled>클릭수 <span>↕</span></button></th>
+            <th data-sort="sales"><button type="button" disabled>월 판매량 <span>↕</span></button></th>
+            <th data-sort="revenue"><button type="button" disabled>월 매출 <span>↕</span></button></th>
+            <th data-sort="conversion"><button type="button" disabled>전환율 <span>↕</span></button></th>
+          </tr></thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+  <section id="sourcing-panel" class="sourcing-panel" hidden aria-label="카테고리 소싱판별">
+    <div class="sourcing-panel-head"><div><strong>카테고리 키워드 소싱판별 마법사</strong><small>판별 결과의 키워드를 선택해 윙렌즈 판매 지표 분석으로 이어갈 수 있습니다.</small></div><button id="close-sourcing" type="button" aria-label="소싱판별 닫기">×</button></div>
+    <iframe id="sourcing-frame" title="카테고리 키워드 소싱판별" src="http://localhost:8787/"></iframe>
+  </section>
+  <div id="seller-account-modal" class="seller-account-modal" hidden role="dialog" aria-modal="true" aria-labelledby="seller-account-title">
+    <section class="seller-account-card">
+      <div class="seller-account-head"><div><strong id="seller-account-title">판매자 계정 관리</strong><small>계정 별칭만 이 브라우저에 저장합니다. 비밀번호·쿠키·인증정보는 저장하지 않습니다.</small></div><button id="seller-account-close" type="button" aria-label="닫기">×</button></div>
+      <label for="seller-account-alias">계정 별칭</label>
+      <div class="seller-account-add"><input id="seller-account-alias" maxlength="24" placeholder="예: 본계정, 부계정 1"><button id="seller-account-add" type="button">추가</button></div>
+      <div id="seller-account-list" class="seller-account-list"></div>
+      <p>조회 중 쿠팡윙 세션이 끊기면 다음 별칭을 자동 선택하고, 시크릿 로그인 창을 열어 드립니다. 실제 로그인은 사용자가 직접 진행합니다.</p>
+    </section>
+  </div>
+  <div id="login-modal" class="login-modal" hidden role="dialog" aria-modal="true" aria-labelledby="login-modal-title">
+    <div class="login-modal-card">
+      <span class="modal-mark">!</span>
+      <strong id="login-modal-title">쿠팡윙을 먼저 로그인 하셔야 합니다</strong>
+      <small id="login-modal-description">쿠팡윙 로그인 후 분석 시작 버튼을 다시 눌러주세요.</small>
+      <div><button id="modal-login" type="button">쿠팡윙 로그인 하기</button><button id="modal-close" type="button">닫기</button></div>
+    </div>
+  </div>
+  <div id="coupang-access-modal" class="login-modal" hidden role="dialog" aria-modal="true" aria-labelledby="coupang-access-title">
+    <div class="login-modal-card">
+      <span class="modal-mark">!</span>
+      <strong id="coupang-access-title">쿠팡 재로그인이 필요합니다</strong>
+      <small id="coupang-access-description">쿠팡 접근 제한 또는 로그인 세션 문제로 조회를 중단했습니다. 일반 쿠팡 홈에서 로그인 후 잠시 뒤 다시 시도해 주세요.</small>
+      <div><button id="open-coupang-login" type="button">쿠팡 홈 열기</button><button id="close-coupang-access" type="button">닫기</button></div>
+    </div>
+  </div>
+  <div id="range-modal" class="range-modal" hidden role="dialog" aria-modal="true" aria-labelledby="range-modal-title">
+    <div class="range-modal-card">
+      <div class="range-modal-head"><strong id="range-modal-title">분석 범위 설정</strong><button id="range-close" type="button" aria-label="닫기">×</button></div>
+      <div class="range-columns"><section><b>시작</b><div id="range-start-options" class="range-options"></div></section><section><b>종료</b><div id="range-end-options" class="range-options"></div></section></div>
+      <button id="range-apply" class="range-apply" type="button">범위 적용</button>
+    </div>
+  </div>
+  <div id="review-modal" class="review-modal" hidden role="dialog" aria-modal="true" aria-labelledby="review-modal-title">
+    <section class="review-modal-card">
+      <div class="review-modal-head"><div><strong id="review-modal-title">리뷰 분석</strong><small id="review-product-name"></small></div><div><button id="review-export" class="review-export" type="button" disabled>엑셀 다운로드</button><button id="review-close" type="button" aria-label="닫기">×</button></div></div>
+      <input id="review-file" type="file" accept=".csv,text/csv" hidden>
+      <p id="review-total" class="review-total">리뷰 수를 확인하는 중입니다.</p>
+      <div class="review-toolbar"><button id="review-select-all" type="button" class="selected">전체선택</button><button id="review-clear-all" type="button">전체해제</button><span>기간</span><button type="button" data-review-period="all" class="selected">전체</button><button type="button" data-review-period="1">1년</button><button type="button" data-review-period="2">2년</button><button type="button" data-review-period="3">3년</button><input id="review-date" type="date" aria-label="작성일 선택"><span>평점</span><button type="button" data-review-rating="all" class="selected">전체</button><button type="button" data-review-rating="1">1★</button><button type="button" data-review-rating="2">2★</button><button type="button" data-review-rating="3">3★</button><button type="button" data-review-rating="4">4★</button><button type="button" data-review-rating="5">5★</button><button id="review-reset" class="review-reset" type="button">↻ 리셋</button></div>
+      <div id="review-collector-wait" class="review-collector-wait"><strong>한이룸 후기 CSV를 불러와 주세요.</strong><small>한이룸 후기 수집기에서 CSV로 저장한 파일을 선택하면 리뷰 목록과 추이를 표시합니다.</small></div>
+      <p class="review-chart-note">* 차트추가는 최대 5개까지 가능합니다.</p>
+      <div id="review-list" class="review-list review-summary" hidden></div>
+      <div id="review-chart" class="review-chart-placeholder" hidden><div class="review-chart-head"><b id="review-chart-range">차트기간: -</b><div><button type="button" data-review-granularity="day" class="selected">일</button><button type="button" data-review-granularity="week">주</button><button type="button" data-review-granularity="month">월</button></div></div><div id="review-chart-bars"></div></div>
+    </section>
+  </div>
+  <script src="dashboard.js"></script>
+</body>
+</html>

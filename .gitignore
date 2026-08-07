@@ -1,4 +1,8 @@
 auth-store.json
 __pycache__/
 *.py[cod]
-
+node_modules/
+*.xlsx
+wing-lens-extension.zip
+.env
+.env.*

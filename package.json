@@ -1,0 +1,24 @@
+{
+  "name": "sourcing-judge-admin",
+  "version": "1.0.0",
+  "description": "셀러라이프에서 내려받은 카테고리별 키워드 엑셀을 필터링하고, 한이룸 소싱판결사로 판별 결과를 확인하는 프로그램입니다.",
+  "main": "app.js",
+  "scripts": {
+    "test": "node --test tests/wing-safety.test.mjs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/parkhs8736-sys/category-keyword-sourcing-wizard.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/parkhs8736-sys/category-keyword-sourcing-wizard/issues"
+  },
+  "homepage": "https://github.com/parkhs8736-sys/category-keyword-sourcing-wizard#readme",
+  "dependencies": {
+    "nodemailer": "^9.0.3"
+  }
+}

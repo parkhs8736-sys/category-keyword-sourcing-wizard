@@ -1,0 +1,32 @@
+{
+  "manifest_version": 3,
+  "name": "카테고리 소싱판별 · 윙렌즈",
+  "version": "1.36.1",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAxeSaYu8u5s8xVbZHY+X8wI8G9KOPE5LyV8UNgLlI2bqoiLFjYLZ8gxG9kfDkT8MiD6jwlRaBMsAMfStqMRcQMKB1a+8h/xiEm7Y4yssRKUNgTSjDc/8NMdD5iYQgVn4cY8Fux+LtEd73DEPzEbtmhtSi8hSVYSzvirh28wGflbQBz5VgnG0pm/8JyN8lpmYXwRklot1fXZbPhuMStwFLHFqti2d8gdpwTe4pKNwrm/99TVQrCo/QjjfgRNk4GqWgud/AUWfB6XSB+E+KjlEryw9Ie1cdvqPkD7MQkWxB2iOkxEFy06QPtrMzEYhyKOpnWLI+e6zhsnQtSewaAMklXQIDAQAB",
+  "description": "카테고리 소싱판별 결과와 로그인된 쿠팡윙 세션으로 키워드별 판매 지표를 로컬에서 조회합니다.",
+  "permissions": ["tabs", "scripting", "windows"],
+  "incognito": "spanning",
+  "host_permissions": ["https://*.coupang.com/*", "http://localhost:8787/*"],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'; frame-src http://localhost:8787"
+  },
+  "externally_connectable": {
+    "matches": ["http://localhost:8787/*"]
+  },
+  "background": { "service_worker": "service-worker.js" },
+  "action": { "default_title": "윙렌즈 키워드 분석 열기" },
+  "content_scripts": [
+    {
+      "matches": ["https://*.coupang.com/*"],
+      "exclude_matches": ["https://wing.coupang.com/*"],
+      "js": ["coupang-reader.js"],
+      "css": ["coupang-reader.css"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://wing.coupang.com/*"],
+      "js": ["wing-bridge.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}
